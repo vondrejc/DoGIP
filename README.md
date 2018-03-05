@@ -22,4 +22,4 @@ At the moment the code contains two examples:
 
 ## References
 
-- J. Vondřejc: *Double-grid quadrature with interpolation-projection (DoGIP) as a novel discretisation approach: An application to FEM on simplices.* 2017.
+- J. Vondřejc: *Double-grid quadrature with interpolation-projection (DoGIP) as a novel discretisation approach: An application to FEM on simplices.* 2017. [arXiv:1710.09913](http://arxiv.org/abs/1710.09913)
