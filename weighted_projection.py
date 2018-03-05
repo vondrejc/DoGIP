@@ -1,4 +1,4 @@
-from dolfin import *
+from fenics import *
 import numpy as np
 from scipy.sparse import csr_matrix, linalg
 
@@ -27,7 +27,7 @@ solve(A*u*v*dx==A*f*v*dx, u_fenics)
 ## DoGIP - double-grid integration with interpolation-projection #############
 W = FunctionSpace(mesh, "CG", 2*pol_order) # double-grid space
 w = TestFunction(W)
-Adiag = assemble(A*w*dx).array() # diagonal matrix of material coefficients
+Adiag = assemble(A*w*dx).get_local() # diagonal matrix of material coefficients
 b = assemble(A*f*v*dx) # vector of right-hand side
 
 # assembling interpolation-projection matrix B
@@ -36,7 +36,7 @@ for ii in range(V.dim()):
     bfun = Function(V)
     bfun.vector()[ii] = 1.
     bfund = interpolate(bfun, W)
-    B[ii] = bfund.vector().array()
+    B[ii] = bfund.vector().get_local()
 
 np.putmask(B, np.abs(B)<1e-14, 0) # removing the values that are close to zero
 B = csr_matrix(B) # changing to the compressed sparse row (CSR) format
@@ -48,8 +48,8 @@ def Afun(x):
     return B.T.dot(Adiag*B.dot(x))
 
 Alinoper = linalg.LinearOperator((V.dim(), V.dim()), matvec=Afun, dtype=np.float)
-x, info = linalg.cg(Alinoper, b.array(), x0=np.zeros(V.dim()),
+x, info = linalg.cg(Alinoper, b.get_local(), x0=np.zeros(V.dim()),
                     tol=1e-8, maxiter=1e3, callback=None)
 
-print('difference FEniCS vs DoGIP: {}'.format(np.linalg.norm(u_fenics.vector().array()-x)))
+print('difference FEniCS vs DoGIP: {}'.format(np.linalg.norm(u_fenics.vector().get_local()-x)))
 print('END')

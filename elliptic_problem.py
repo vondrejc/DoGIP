@@ -1,4 +1,4 @@
-from dolfin import *
+from fenics import *
 import numpy as np
 from scipy.sparse import csr_matrix, linalg
 
@@ -29,9 +29,9 @@ solve(A*inner(grad(u), grad(v))*dx==f*v*dx, u_fenics, bc) # solution by FEniCS
 W=FunctionSpace(mesh, "DG", 2*(pol_order-1)) # double-grid space
 Wvector=VectorFunctionSpace(mesh, "DG", 2*(pol_order-1)) # vector variant of double-grid space
 w=TestFunction(W)
-Adiag=assemble(A*w*dx).array() # diagonal matrix of material coefficients
+Adiag=assemble(A*w*dx).get_local() # diagonal matrix of material coefficients
 Adiag_full=np.einsum('i,jk->ijk', Adiag, np.eye(dim)) # block-diagonal mat. for non-isotropic mat. 
-b=assemble(f*v*dx).array() # vector of right-hand side
+b=assemble(f*v*dx).get_local() # vector of right-hand side
 b[bc.get_boundary_values().keys()]=0 # application of homogeneous Dirichlet boundary conditions
 
 # assembling interpolation-projection matrix B
@@ -40,7 +40,7 @@ for ii in range(V.dim()):
     bfun=Function(V)
     bfun.vector()[ii]=1.
     bfund=project(grad(bfun), Wvector)
-    B[ii]=bfund.vector().array()
+    B[ii]=bfund.vector().get_local()
 
 np.putmask(B, np.abs(B)<1e-14, 0) # removing the values that are close to zero
 B=csr_matrix(B) # changing to the compressed sparse row (CSR) format
@@ -58,5 +58,5 @@ def Afun(x):
 Alinoper=linalg.LinearOperator((b.size, b.size), matvec=Afun, dtype=np.float) # system matrix
 x, info=linalg.cg(Alinoper, b, x0=np.zeros_like(b), tol=1e-8, maxiter=1e2) # conjugate gradients
 
-print('difference FEniCS vs DoGIP: {}'.format(np.linalg.norm(u_fenics.vector().array()-x)))
+print('difference FEniCS vs DoGIP: {}'.format(np.linalg.norm(u_fenics.vector().get_local()-x)))
 print('END')
