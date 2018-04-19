@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix, linalg
 dim=2 # dimension of the problem
 N=3 # no. of elements
 pol_order=1 # polynomial order of FEM approximation
+mesh_perturbation = 1
 
 # creating MESH, defining MATERIAL and SOURCE
 if dim==2: 
@@ -16,6 +17,12 @@ elif dim==3:
     mesh = UnitCubeMesh(N, N, N)
     A = Expression("1+100*x[0]*(1-x[0])*x[1]*x[2]", degree=4)
     f = Expression("(1-x[0])*x[1]*x[2]", degree=3)
+
+if mesh_perturbation:
+    mesh.coordinates()[:] += 0.1*np.random.random(mesh.coordinates().shape)
+    plot(mesh)
+    import matplotlib.pylab as pl
+    pl.show()
 
 ## standard approach with FEniCS #############################################
 V = FunctionSpace(mesh, "CG", pol_order) # original FEM space

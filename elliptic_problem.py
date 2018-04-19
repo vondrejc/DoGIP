@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix, linalg
 dim=2 # dimension of the problem
 N=3 # no. of elements
 pol_order=1 # polynomial order of FEM approximation
+mesh_perturbation = 1
 
 # creating MESH, defining MATERIAL and SOURCE
 if dim==2:
@@ -16,6 +17,12 @@ elif dim==3:
     mesh = UnitCubeMesh(N, N, N)
     A=Expression("1+10*16*x[0]*(1-x[0])*(1-x[1])*x[2]", degree=4)
     f=Expression("80*x[0]*(0.5-x[0])*(1.-x[0])*x[1]*(1.-x[1])", degree=5)
+
+if mesh_perturbation:
+    mesh.coordinates()[:] += 0.1*np.random.random(mesh.coordinates().shape)
+    plot(mesh)
+    import matplotlib.pylab as pl
+    pl.show()
 
 ## standard approach with FEniCS #############################################
 V=FunctionSpace(mesh, "CG", pol_order) # original FEM space
@@ -30,9 +37,10 @@ W=FunctionSpace(mesh, "DG", 2*(pol_order-1)) # double-grid space
 Wvector=VectorFunctionSpace(mesh, "DG", 2*(pol_order-1)) # vector variant of double-grid space
 w=TestFunction(W)
 Adiag=assemble(A*w*dx).get_local() # diagonal matrix of material coefficients
-Adiag_full=np.einsum('i,jk->ijk', Adiag, np.eye(dim)) # block-diagonal mat. for non-isotropic mat. 
-b=assemble(f*v*dx).get_local() # vector of right-hand side
-b[bc.get_boundary_values().keys()]=0 # application of homogeneous Dirichlet boundary conditions
+Adiag_full=np.einsum('i,jk->ijk', Adiag, np.eye(dim)) # block-diagonal mat. for non-isotropic mat.
+bv=assemble(f*v*dx)
+bc.apply(bv)
+b=bv.get_local() # vector of right-hand side
 
 # assembling interpolation-projection matrix B
 B=np.zeros([V.dim(), Wvector.dim()])
