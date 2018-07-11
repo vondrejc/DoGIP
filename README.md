@@ -19,10 +19,11 @@ At the moment the code contains two examples:
 
 - weighted_projection.py - the DoGIP approach for weighted projection in 2D and 3D using simplicial elements of order p
 - elliptic_problem.py - the DoGIP approach for scalar elliptic problem (diffusion, stationary heat transfer, etc.) in 2D and 3D using simplicial elements of order p
-- dogip.py
-- reference.py
-- wp_multiplication.py
-- ep_multiplication.py
+- weighted_projection_multiplication.py - element-wise version of DoGIP for weighted projection
+- elliptic_problem_multiplication.py - element-wise version of DoGIP for scalar elliptic problem
+- dogip_dimensions.py - calculated the dimensions of DoGIP matrices along with computational and memory requirements
+- dogip.py - auxiliary module with functions generating matrices for DoGIP
+- reference.py - auxiliary module with functions on reference element
 
 ## References
 
