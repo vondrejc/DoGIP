@@ -7,7 +7,7 @@ from dolfin import (UnitSquareMesh, UnitCubeMesh, Expression, FunctionSpace, Vec
 import numpy as np
 from scipy.io import savemat, loadmat
 import itertools
-from dogip import get_B0, get_B, get_A_T
+from dogip import get_Bhat, get_B, get_A_T
 
 dims = [2,3]
 problems = [0,1] # 0: L2-projection, 1: scalar elliptic problem
@@ -79,7 +79,7 @@ for dim, problem in itertools.product(dims, problems):
                 A_T=get_A_T(Amat, V, Ws, problem=problem)
 
             print('generating matrices B, B0...')
-            B0=get_B0(dim=dim, pol_order=p, problem=problem)
+            B0=get_Bhat(dim=dim, pol_order=p, problem=problem)
             B=get_B(V, W, dim=dim, pol_order=p, problem=problem)
 
             A=AG.sparray()

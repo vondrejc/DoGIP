@@ -13,11 +13,11 @@ pol_order=1 # polynomial order of FEM approximation
 # creating MESH, defining MATERIAL and SOURCE
 if dim==2:
     mesh=UnitSquareMesh(N,N)
-    A=Expression("1+10*16*x[0]*(1-x[0])*x[1]*(1-x[1])", degree=4)
+    m=Expression("1+10*16*x[0]*(1-x[0])*x[1]*(1-x[1])", degree=4)
     f=Expression("80*x[0]*(0.5-x[0])*(1.-x[0])*x[1]*(1.-x[1])", degree=5)
 elif dim==3:
     mesh = UnitCubeMesh(N, N, N)
-    A=Expression("1+10*16*x[0]*(1-x[0])*(1-x[1])*x[2]", degree=4)
+    m=Expression("1+10*16*x[0]*(1-x[0])*(1-x[1])*x[2]", degree=4)
     f=Expression("80*x[0]*(0.5-x[0])*(1.-x[0])*x[1]*(1.-x[1])", degree=5)
 
 mesh.coordinates()[:] += 0.1*np.random.random(mesh.coordinates().shape) # mesh perturbation
@@ -27,13 +27,13 @@ V=FunctionSpace(mesh, "CG", pol_order) # original FEM space
 bc=DirichletBC(V, Constant(0.0), lambda x, on_boundary: on_boundary)
 u, v=TrialFunction(V), TestFunction(V)
 u_fenics=Function(V) # the vector for storing the solution
-solve(A*inner(grad(u), grad(v))*dx==f*v*dx, u_fenics, bc) # solution by FEniCS
+solve(m*inner(grad(u), grad(v))*dx==f*v*dx, u_fenics, bc) # solution by FEniCS
 
 ## DoGIP - double-grid integration with interpolation-projection #############
 W=FunctionSpace(mesh, "DG", 2*(pol_order-1)) # double-grid space
 Wvector=VectorFunctionSpace(mesh, "DG", 2*(pol_order-1)) # vector variant of double-grid space
 w=TestFunction(W)
-A_dogip=assemble(A*w*dx).get_local() # diagonal matrix of material coefficients
+A_dogip=assemble(m*w*dx).get_local() # diagonal matrix of material coefficients
 A_dogip_full=np.einsum('i,jk->ijk', A_dogip, np.eye(dim)) # block-diagonal mat. for non-isotropic mat.
 bv=assemble(f*v*dx)
 bc.apply(bv)

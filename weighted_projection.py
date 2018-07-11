@@ -13,11 +13,11 @@ pol_order=1 # polynomial order of FEM approximation
 # creating MESH, defining MATERIAL and SOURCE
 if dim==2:
     mesh = UnitSquareMesh(N, N)
-    A = Expression("1+10*16*x[0]*(1-x[0])*x[1]*(1-x[1])", degree=4)
+    m = Expression("1+10*16*x[0]*(1-x[0])*x[1]*(1-x[1])", degree=4) # material coefficients
     f = Expression("x[0]*x[0]*x[1]", degree=3)
 elif dim==3:
     mesh = UnitCubeMesh(N, N, N)
-    A = Expression("1+100*x[0]*(1-x[0])*x[1]*x[2]", degree=4)
+    m = Expression("1+100*x[0]*(1-x[0])*x[1]*x[2]", degree=4) # material coefficients
     f = Expression("(1-x[0])*x[1]*x[2]", degree=3)
 
 mesh.coordinates()[:] += 0.1*np.random.random(mesh.coordinates().shape)  # mesh perturbation
@@ -26,13 +26,13 @@ mesh.coordinates()[:] += 0.1*np.random.random(mesh.coordinates().shape)  # mesh 
 V = FunctionSpace(mesh, "CG", pol_order) # original FEM space
 u, v = TrialFunction(V), TestFunction(V)
 u_fenics = Function(V)
-solve(A*u*v*dx==A*f*v*dx, u_fenics)
+solve(m*u*v*dx==m*f*v*dx, u_fenics)
 
 ## DoGIP - double-grid integration with interpolation-projection #############
 W = FunctionSpace(mesh, "CG", 2*pol_order) # double-grid space
 w = TestFunction(W)
-A_dogip = assemble(A*w*dx).get_local() # diagonal matrix of material coefficients
-b = assemble(A*f*v*dx) # vector of right-hand side
+A_dogip = assemble(m*w*dx).get_local() # diagonal matrix of material coefficients
+b = assemble(m*f*v*dx) # vector of right-hand side
 
 # assembling interpolation-projection matrix B
 B=get_B(V, W, dim, pol_order, problem=0)
