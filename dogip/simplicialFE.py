@@ -1,12 +1,13 @@
 import numpy as np
 import scipy.sparse
-from reference import get_reference_element, Mapping
+from .simplex import get_reference_element, Mapping, get_dof_coordinates
 from fenics import (TrialFunction, TestFunction, assemble, inner, grad, FunctionSpace, Function,
                     EigenMatrix, dx, Mesh, MeshEditor, Point, Cell, project, interpolate,
                     assemble_local, cells, triangle, tetrahedron, FiniteElement)
+from .dim_spaces import dimP
 
 
-def get_Bhat(dim=2, pol_order=1, problem=1):
+def get_Bhat(dim=2, pol_order=1, problem=1, W_space=True):
     """
     Calculate interpolation matrix between V and W on a reference element
 
@@ -28,31 +29,37 @@ def get_Bhat(dim=2, pol_order=1, problem=1):
     mesh=get_reference_element(dim)
     cell=Cell(mesh,0)
     V=FunctionSpace(mesh, "CG", pol_order) # original FEM space
-    if problem in [1, 'elliptic']:
-        W=FunctionSpace(mesh, "DG", 2*(pol_order-1)) # double-grid space
-    elif problem in [0, 'projection']:
-        W=FunctionSpace(mesh, "CG", 2*pol_order) # double-grid space
+    if W_space:
+        if problem in [1, 'elliptic']:
+            W=FunctionSpace(mesh, "DG", 2*(pol_order-1)) # double-grid space
+            B = np.zeros([W.dim(),V.dim(),dim])
+        elif problem in [0, 'projection']:
+            W=FunctionSpace(mesh, "CG", 2*pol_order) # double-grid space
+            B = np.zeros([W.dim(),V.dim()])
+        dofcoors=W.element().tabulate_dof_coordinates(cell)
+    else:
+        if problem in [1, 'elliptic']:
+            dofcoors=get_dof_coordinates(dim, 2*(pol_order-1))
+            B = np.zeros([dofcoors.shape[0],V.dim(),dim])
+        elif problem in [0, 'projection']:
+            dofcoors=get_dof_coordinates(dim, 2*pol_order)
+            B = np.zeros([dofcoors.shape[0],V.dim()])
 
     elementV = V.element()
-    dofcoors=W.element().tabulate_dof_coordinates(cell)
     if problem in [1, 'elliptic']:
-        B = np.zeros([W.dim(),V.dim(),dim])
         eval_basis = lambda *args: elementV.evaluate_basis_derivatives_all(*args)
         der = (1,)
         postprocess = lambda B: np.einsum('jkr->rjk',B)
         val_shape = (V.dim(), dim)
     elif problem in [0, 'projection']:
-        B = np.zeros([W.dim(),V.dim()])
         eval_basis = lambda *args: elementV.evaluate_basis_all(*args)
         der = ()
         postprocess = lambda B: B
         val_shape = (V.dim())
 
     for jj, dofcoor in enumerate(dofcoors):
-        val = np.zeros(val_shape, dtype=float)
-        args = der + (val, dofcoor, cell.get_vertex_coordinates(), cell.orientation())
-        eval_basis(*args)
-        B[jj] = val
+        args=der+(dofcoor, cell.get_vertex_coordinates(), cell.orientation())
+        B[jj]=eval_basis(*args).reshape(val_shape)
 
     return postprocess(B)
 
@@ -121,7 +128,7 @@ def get_B(V, W, problem=1, sparse=True, threshold=1e-14):
 
     return B.T
 
-def get_A_T(m, V, W, problem=1):
+def get_A_T(m, V, W=None, problem=1):
     """
     The element-wise (local) system matrices of DoGIP
     Projection/interpolation operator between spaces V and W on the whole computational domain.
@@ -129,7 +136,8 @@ def get_A_T(m, V, W, problem=1):
     Parameters
     ----------
     m : Expression
-        defines material coefficients as a scalar valued function
+        defines material coefficients as a scalar valued function (without loss of generality,
+        material m is considered to be isotropic)
     V : FunctionSpace
         original finite element space
     W : FunctionSpace
@@ -154,9 +162,26 @@ def get_A_T(m, V, W, problem=1):
         # assumes (without generality) that material coefficients are isotropic
         AT_dogip = np.empty([mesh.num_cells(), dim, dim, W.element().space_dimension()])
         for ii, cell in enumerate(cells(V.mesh())):
-            refmap = Mapping(nodes=cell.get_vertex_coordinates().reshape(dim+1,dim))
-            MT = np.einsum('ij,k',np.eye(dim), assemble_local(m*w*dx, cell))
+            refmap = Mapping(nodes=np.array(cell.get_vertex_coordinates()).reshape(dim+1,dim))
+            MT = np.einsum('ij,k',np.eye(dim), np.atleast_1d(assemble_local(m*w*dx, cell)))
             AT_dogip[ii] = np.einsum('rp,sq,pqj->rsj', refmap.Ai, refmap.Ai, MT)
+    return AT_dogip
+
+def get_A_T_empty(V, problem=1, full=False):
+    mesh = V.mesh()
+    dim = mesh.geometry().dim()
+
+    p = V.ufl_element().degree()
+    if full:
+        if problem in [0, 'projection']:
+            AT_dogip = np.empty([mesh.num_cells(), dimP(dim, 2*p)])
+        elif problem in [1, 'elliptic']:
+            AT_dogip = np.empty([mesh.num_cells(), dim, dim, dimP(dim, 2*(p-1))])
+    else:
+        if problem in [0, 'projection']:
+            AT_dogip = np.empty([1,dimP(dim, 2*p)])
+        elif problem in [1, 'elliptic']:
+            AT_dogip = np.empty([1, dim, dim, dimP(dim, 2*(p-1))])
     return AT_dogip
 
 class Project_multiple():
