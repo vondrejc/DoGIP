@@ -1,5 +1,5 @@
-from fenics import (UnitSquareMesh, UnitCubeMesh, FunctionSpace, Function, TestFunction,
-                    TrialFunction, Expression, assemble, dx, inner, grad,  DirichletBC, Constant,
+from dolfin import (UnitSquareMesh, UnitCubeMesh, FunctionSpace, Function, TestFunction,
+                    TrialFunction, Expression, assemble, dx, inner, grad, DirichletBC, Constant,
                     solve, VectorFunctionSpace, cells, EigenMatrix)
 import numpy as np
 from scipy.sparse import linalg
@@ -10,10 +10,9 @@ import unittest
 
 class Test_elliptic_problem(unittest.TestCase):
 
-
     def test_DoGIP_vs_FEniCS(self):
         print('\n== testing DoGIP vs. FEniCS for problem of weighted projection ====')
-        for dim, pol_order in itertools.product([2,3],[1,2]):
+        for dim, pol_order in itertools.product([2,3], [1,2]):
             print('dim={}; pol_order={}'.format(dim,pol_order))
             N=2 # no. of elements
 
