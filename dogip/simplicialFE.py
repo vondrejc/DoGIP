@@ -172,12 +172,12 @@ def get_A_T_empty(V, problem=1, full=False):
     dim = mesh.geometry().dim()
 
     p = V.ufl_element().degree()
-    if full:
+    if full: # all elements
         if problem in [0, 'projection']:
             AT_dogip = np.empty([mesh.num_cells(), dimP(dim, 2*p)])
         elif problem in [1, 'elliptic']:
             AT_dogip = np.empty([mesh.num_cells(), dim, dim, dimP(dim, 2*(p-1))])
-    else:
+    else: # only one element
         if problem in [0, 'projection']:
             AT_dogip = np.empty([1,dimP(dim, 2*p)])
         elif problem in [1, 'elliptic']:

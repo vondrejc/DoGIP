@@ -7,7 +7,7 @@ from scipy.sparse import csr_matrix
 fact = np.math.factorial
 
 
-class Dimensions():
+class Dimensions(): # super class
     def __init__(self, dim=2, Ne=5, p=1):
         self.d = dim
         self.N = Ne
